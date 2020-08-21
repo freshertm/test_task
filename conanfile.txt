@@ -2,7 +2,7 @@
 boost/1.73.0
 zeromq/4.3.2
 openssl/1.1.1g
-pistache/d5608a1
+#pistache/d5608a1@conan/stable
 
 [generators]
 cmake
