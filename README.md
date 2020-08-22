@@ -2,5 +2,5 @@
 
 # Prepare
 - $ conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
-- $ conan install . --build=missing
- .... 
+- $ conan install . -s compiler.libcxx=libstdc++11 --build=missing
+- .... 
