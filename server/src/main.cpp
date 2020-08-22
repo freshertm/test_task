@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <boost/asio.hpp>
+#include "pinger.h"
 
 class repeat_timer
 {
@@ -10,6 +11,7 @@ public:
                                                                                                                            handler_(handler),
                                                                                                                            interval_(interval)
     {
+        timer.expires_from_now(std::chrono::milliseconds(1));
         timer.async_wait(std::bind(&repeat_timer::handle_timer, this, std::placeholders::_1));
     }
 
@@ -32,6 +34,18 @@ void print()
     std::cout << "Hello, world!" << std::endl;
 }
 
+void ping_handler(const PingResult &pr)
+{
+    if (!pr.success)
+    {
+        std::cout << "Ping timeout" <<std::endl;
+        return;
+    }
+
+    std::cout << "Ping " << pr.destination << " time=" << pr.time << " ms"
+              << " ttl=" << pr.ttl << std::endl;
+}
+
 int main(int argc, char *argv[])
 {
     try
@@ -45,8 +59,17 @@ int main(int argc, char *argv[])
             return 1;
         }
 
+        std::string host(argv[1]);
+
         boost::asio::io_service io_service;
-        repeat_timer(io_service, std::chrono::seconds(3), &print);
+        Pinger pinger(io_service, &ping_handler);
+
+        repeat_timer timer(io_service, std::chrono::seconds(1),
+                     [&pinger, &host] () {
+                         std::cout << "pinging ... " << std::endl;
+                         pinger.do_ping(host);
+                     });
+
 
         io_service.run();
     }
