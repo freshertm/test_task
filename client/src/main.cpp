@@ -5,14 +5,14 @@
 #include "net_server.h"
 #include "common.h"
 
-Response parse(const Request& r)
-{   
-    std::stringstream ss;
-    ss << "response: <OK>, received: " << r.size() << " bytes" << std::endl;
-    std::string r_string = ss.str();
-    Response resp;
-    std::copy( r_string.begin(), r_string.end(), std::back_inserter(resp));
-    return resp;
+Response parse(const Request &r)
+{
+  std::stringstream ss;
+  ss << "response: <OK>, received: " << r.size() << " bytes" << std::endl;
+  std::string r_string = ss.str();
+  Response resp;
+  std::copy(r_string.begin(), r_string.end(), std::back_inserter(resp));
+  return resp;
 }
 
 int main(int argc, char *argv[])

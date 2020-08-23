@@ -25,18 +25,18 @@ namespace posix_time = boost::posix_time;
 class Pinger_Private
 {
 public:
-  Pinger_Private(boost::asio::io_service &io_service, std::function<void(const PingResult &)> handler)
+  Pinger_Private(boost::asio::io_service &io_service)
       : resolver_(io_service), socket_(io_service, icmp::v4()),
-        timer_(io_service), sequence_number_(0), num_replies_(0),
-        handler_(handler)
+        timer_(io_service), sequence_number_(0), num_replies_(0)
   {
   }
 
-  void do_ping(std::string destination)
+  void do_ping(std::string destination, std::function<void(const PingResult &)> handler)
   {
     icmp::resolver::query query(icmp::v4(), destination, "");
     destination_ = *resolver_.resolve(query);
     is_timeout_ = false;
+    handler_ = handler;
     start_send();
     start_receive();
   }
@@ -70,8 +70,9 @@ private:
 
   void handle_timeout(const boost::system::error_code &error)
   {
-    if (error) {
-     return;
+    if (error)
+    {
+      return;
     }
     is_timeout_ = true;
     handler_(PingResult());
@@ -89,7 +90,7 @@ private:
 
   void handle_receive(std::size_t length)
   {
-   
+
     // The actual number of bytes received is committed to the buffer so that we
     // can extract it using a std::istream object.
     reply_buffer_.commit(length);
@@ -104,7 +105,8 @@ private:
     // filter out only the echo replies that match the our identifier and
     // expected sequence number.
 
-    if (is_timeout_) {
+    if (is_timeout_)
+    {
       return;
     }
 
@@ -115,7 +117,8 @@ private:
       posix_time::ptime now = posix_time::microsec_clock::universal_time();
 
       handler_(PingResult((now - time_sent_).total_milliseconds(), ipv4_hdr.time_to_live(), ipv4_hdr.source_address().to_string()));
-    } else 
+    }
+    else
     {
       start_receive();
     }
@@ -142,16 +145,17 @@ private:
   bool is_timeout_;
 };
 
-Pinger::Pinger(boost::asio::io_service &svc, std::function<void(const PingResult &)> handler) : p_pinger(new Pinger_Private(svc, handler))
+Pinger::Pinger(boost::asio::io_service &svc) : p_pinger(new Pinger_Private(svc))
 {
 }
 
-Pinger::~Pinger() {
+Pinger::~Pinger()
+{
   delete p_pinger;
   p_pinger = nullptr;
 }
 
-void Pinger::do_ping(std::string destination)
+void Pinger::do_ping(std::string destination, std::function<void(const PingResult &)> handler)
 {
-  p_pinger->do_ping(destination);
+  p_pinger->do_ping(destination, handler);
 }

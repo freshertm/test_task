@@ -35,5 +35,5 @@ RUN apt-get update -y \
 
 
 ## Run 
- - bin/test_client
- - bin/test_server 127.0.0.1 
+- bin/test_client
+- bin/test_server 127.0.0.1 

@@ -1,50 +1,47 @@
 #include <iostream>
 #include <chrono>
+#include <list>
+
 #include <boost/asio.hpp>
+
 #include "pinger.h"
-
-class repeat_timer
-{
-public:
-    repeat_timer(boost::asio::io_service &io_service, std::chrono::microseconds interval, std::function<void()> handler) : io_service(io_service),
-                                                                                                                           timer(io_service, interval),
-                                                                                                                           handler_(handler),
-                                                                                                                           interval_(interval)
-    {
-        timer.expires_from_now(std::chrono::milliseconds(1));
-        timer.async_wait(std::bind(&repeat_timer::handle_timer, this, std::placeholders::_1));
-    }
-
-    void handle_timer(const boost::system::error_code &)
-    {
-        timer.expires_from_now(interval_);
-        timer.async_wait(std::bind(&repeat_timer::handle_timer, this, std::placeholders::_1));
-        handler_();
-    }
-
-private:
-    boost::asio::io_service &io_service;
-    boost::asio::steady_timer timer;
-    std::function<void()> handler_;
-    std::chrono::microseconds interval_;
-};
-
-void print()
-{
-    std::cout << "Hello, world!" << std::endl;
-}
+#include "interval_timer.h"
 
 void ping_handler(const PingResult &pr)
 {
     if (!pr.success)
     {
-        std::cout << "Ping timeout" <<std::endl;
+        std::cout << "Ping timeout" << std::endl;
         return;
     }
 
     std::cout << "Ping " << pr.destination << " time=" << pr.time << " ms"
               << " ttl=" << pr.ttl << std::endl;
 }
+
+class client
+{
+public:
+    client(Pinger &pinger, const std::string &destination) : destination(destination),
+                                                             pinger(pinger)
+    {
+    }
+
+    void update_status()
+    {
+        pinger.do_ping(destination, std::bind(&client::ping_handler, this, std::placeholders::_1));
+    }
+
+private:
+    void ping_handler(const PingResult &pr)
+    {
+        ::ping_handler(pr);
+    }
+
+private:
+    std::string destination;
+    Pinger &pinger;
+};
 
 int main(int argc, char *argv[])
 {
@@ -61,15 +58,21 @@ int main(int argc, char *argv[])
 
         std::string host(argv[1]);
 
+        std::list<client> clients;
+
         boost::asio::io_service io_service;
-        Pinger pinger(io_service, &ping_handler);
+        Pinger pinger(io_service);
 
-        repeat_timer timer(io_service, std::chrono::seconds(1),
-                     [&pinger, &host] () {
-                         std::cout << "pinging ... " << std::endl;
-                         pinger.do_ping(host);
-                     });
+        clients.push_back(client(pinger, host));
 
+        interval_timer timer(io_service, std::chrono::seconds(1),
+                             [&clients]() {
+                                 std::cout << "pinging ... " << std::endl;
+                                 for (client &cl : clients)
+                                 {
+                                     cl.update_status();
+                                 }
+                             });
 
         io_service.run();
     }
