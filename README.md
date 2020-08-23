@@ -3,7 +3,7 @@
 ## Dockerfile
 Built with docker using Dockerfile.
 ```
-  from ubuntu:20.04
+from ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -y \
   && apt-get install -y \
@@ -34,6 +34,8 @@ RUN apt-get update -y \
 - cmake --build . -j $(nproc)  
 
 
-## Run 
-- bin/test_client
+# Run 
+- bin/test_client 5555
 - bin/test_server 127.0.0.1 
+
+
